@@ -75,7 +75,6 @@ cchs <- cchs %>% mutate(sex = as_factor(DHH_SEX),
                 main_activity = as_factor(MACG005),
                 weights = WTS_M)
 
-cchs %>% count(age)
 # need to clean age to grab the digits
 cchs <- cchs %>% mutate(
   agegrp = str_extract_all(agegrp, "([[:digit:]]{2})"),
@@ -141,6 +140,7 @@ cchs <- cchs %>% mutate(
   ACC_regulardoc = as_factor(ACC_095),
   regulardoc = as_factor(PHC_020)
 )
+cchs %>% select(contains("_diff"))
 
 # Checking where the module was administered
 cchs %>% count(acc_module, as_factor(GEO_PRV))
@@ -174,8 +174,7 @@ Main dependent variable: any_diff
 
 **Change address when replicating**
 
-```{# Change address when replicating}
-{r}
+```{r}
 cchs_sm <- cchs %>% select(GEO_PRV,sex:agegrp,starts_with("ACC"),
                            DOUCN,starts_with("UCN"))
 
