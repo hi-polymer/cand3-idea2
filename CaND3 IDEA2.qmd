@@ -1,0 +1,185 @@
+---
+title: "CAnD3 IDEA 2: Disparities in Access to Health Care Services in Canada"
+format: html
+editor: visual
+---
+
+**Topic Choice:**
+
+Disparities in Access to Health Care Services in Canada
+
+**Research Question:**
+
+What sociodemographic factors predict disparities in access to health care services in Canada?
+
+## **Data Replicability & Workflow:**
+
+-   Data Source: Odesi - [Canadian Community Health Survey, 2017-2018: Annual Component (odesi.ca)](https://odesi.ca/en/details?id=/odesi/doi__10-5683_SP3_EYLZ18.xml)
+
+-   Data Set Download: GitHub 
+
+-   Data Sharing: GitHub - <https://github.com/hi-polymer/cand3-idea2> 
+
+-   Data Analysis: R Studio
+
+## Data cleaning
+
+### Loading data and libraries
+
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+Load data:
+
+**Change address when replicating**
+
+```{r}
+
+cchs <- read_dta("/Users/thecommon/Downloads/cchs-82M0013-E-2017-2018-Annual-component_F1.dta")
+```
+
+### **Independent Variables:** 
+
+-   Sex (DHH_SEX) 
+
+-   Marital Status (DHHGMS) 
+
+-   Age (DHHGAGE) 
+
+-   Education (EHG2DVR3) 
+
+-   Household Income (INCG015) 
+
+-   Immigrant Status (SDCDVIMM) 
+
+-   Visible Minority Status (SDCDGCGT)
+
+-   Main activity last week (MACG005)
+
+-   Occupational status (LBFDGOCG)
+
+-   Survey weights (WTS_M)
+
+```{r}
+# variables for the demographic 
+cchs <- cchs %>% mutate(sex = as_factor(DHH_SEX),
+                marital_status = as_factor(DHHGMS),
+                agegrp = as_factor(DHHGAGE),
+                edu = as_factor(EHG2DVR3),
+                hh_income = as_factor(INCDGHH),
+                immigration = as_factor(SDCDVIMM),
+                vis_min = as_factor(SDCDGCGT),
+                occupation = as_factor(LBFDGOCG),
+                main_activity = as_factor(MACG005),
+                weights = WTS_M)
+
+cchs %>% count(age)
+# need to clean age to grab the digits
+cchs <- cchs %>% mutate(
+  agegrp = str_extract_all(agegrp, "([[:digit:]]{2})"),
+  agegrp = map_chr(agegrp, str_c, collapse = "-"),  
+  agegrp = if_else(agegrp == "80", "80+", agegrp)
+) 
+
+
+```
+
+### **Dependent Variables:**
+
+Inclusion flag (DOACC)
+
+1.  Difficulties Accessing Health Care Services - composite index derived from:
+
+    -   Experienced difficulties getting specialist care - 12 mo (ACC_010)
+
+    -   Experienced difficulties getting non-emergency surgery - 12 mo (ACC_025)
+
+    -   Experienced difficulties getting non-emergency test - 12 mo (ACC_040)
+
+    -   Experienced difficulty getting health information - 12 mo (ACC_060)
+
+    -   Experienced difficulties getting routine care - 12 mo (ACC_105)
+
+    -   Experienced difficulties getting immediate care - 12 mo (ACC_135)
+
+2.  No Access to Regular Health Care Provider
+
+    -   Has a regular health care provider (ACC_095)
+
+    -   **Instead we use PHC_020 that is administered to entire sample**
+
+    -   Has a regular health care provider (PHC_020)
+
+3.  Unmet healthcare needs (potential other outcome)
+
+    -   Unmet healthcare needs (DOUCN)
+
+    -   self_perception (UCN_005)
+
+    -   reasons (UCN_010A to K)
+
+    -   type of care (UCN_015A to J)
+
+```{r}
+
+cchs <- cchs %>% mutate(
+  acc_module = as_factor(DOACC),
+  specialist = as_factor(ACC_005),
+  specialist_diff = as_factor(ACC_010),
+  surgery = as_factor(ACC_020),
+  surgery_diff = as_factor(ACC_025),
+  medtest = as_factor(ACC_035),
+  medtest_diff = as_factor(ACC_040),
+  healthinfo = as_factor(ACC_050),
+  healthinfo_diff = as_factor(ACC_060),
+  routinecare = as_factor(ACC_100),
+  routinecare_diff = as_factor(ACC_105),
+  immidiatecare = as_factor(ACC_130),
+  immidiatecare_diff = as_factor(ACC_135),
+  ACC_regulardoc = as_factor(ACC_095),
+  regulardoc = as_factor(PHC_020)
+)
+
+# Checking where the module was administered
+cchs %>% count(acc_module, as_factor(GEO_PRV))
+
+
+```
+
+This module was only administered to Nova Scotia and Nunavut.
+
+#### Constructing the index variable:
+
+```{r}
+# constructing the variable for difficulity
+
+cchs <- cchs %>% mutate(
+  across(contains("_diff"), ~ if_else(.x == "Yes", 1, 0), .names = "{.col}_bin" 
+  ),
+  # increasing number of difficulities
+  num_diff = rowSums(pick(ends_with("_diff_bin")),na.rm = TRUE),
+  num_diff = if_else(acc_module == "No", NA, num_diff),
+  # by any difficulities
+  any_diff = if_else(num_diff>0, "Yes", "No")
+  ) 
+
+cchs %>% count(acc_module,any_diff)
+```
+
+Main dependent variable: any_diff
+
+### Save file
+
+**Change address when replicating**
+
+```{# Change address when replicating}
+{r}
+cchs_sm <- cchs %>% select(GEO_PRV,sex:agegrp,starts_with("ACC"),
+                           DOUCN,starts_with("UCN"))
+
+rm(cchs)
+save(cchs_sm,file = "/Users/thecommon/Documents/cchs_2017_18.Rda")
+
+```
