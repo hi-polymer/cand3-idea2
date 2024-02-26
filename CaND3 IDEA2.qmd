@@ -38,9 +38,10 @@ Load data:
 ```{r}
 
 cchs <- read_dta("/Users/thecommon/Downloads/cchs-82M0013-E-2017-2018-Annual-component_F1.dta")
+
 ```
 
-### **Independent Variables:** 
+### **Independent Variables:**
 
 -   Sex (DHH_SEX) 
 
@@ -175,9 +176,10 @@ Main dependent variable: any_diff
 **Change address when replicating**
 
 ```{r}
-cchs_sm <- cchs %>% select(GEO_PRV,sex:agegrp,starts_with("ACC"),
-                           DOUCN,starts_with("UCN"))
 
+cchs_sm <- cchs %>% select(GEO_PRV,sex:any_diff,ends_with("_diff"), 
+                           ends_with("_bin"), starts_with("ACC"), 
+                           DOUCN,starts_with("UCN"))
 rm(cchs)
 save(cchs_sm,file = "/Users/thecommon/Documents/cchs_2017_18.Rda")
 
